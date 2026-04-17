@@ -1,0 +1,2620 @@
+<!doctype html>
+<html lang="fr"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>XY Shooter</title>
+  <style>
+    :root{
+      --bg0:#0b1020;
+      --bg1:#0e1733;
+
+      --stroke: rgba(255,255,255,.14);
+      --txt:#eef2ff;
+      --muted:#b6c2ff;
+
+      --gridThin: rgba(90,170,255,.16);
+      --gridBold: rgba(90,170,255,.52);
+      --axes:  rgba(235,245,255,.95);
+
+      --traj:  #ff2b2b;
+      --ok:    #3dff9b;
+      --bad:   #ff5c7a;
+      --warn:  #ffd34d;
+      --help:  #ffb84d;
+
+      --ghostAffine: rgba(61,255,155,.85); /* vert */
+      --ghostQuad:   rgba(255,43,43,.85);  /* rouge */
+
+      --panel: rgba(255,255,255,.07);
+      --panel2: rgba(255,255,255,.04);
+
+      --r:18px;
+      --sh:0 10px 30px rgba(0,0,0,.35);
+
+      /* Couleurs d’aide (a,b,c,x) */
+      --colA: rgba(122,166,255,.98); /* bleu */
+      --colB: rgba(255,211,77,.98);  /* jaune */
+      --colC: rgba(61,255,155,.98);  /* vert */
+      --colX: rgba(255,92,122,.98);  /* rose/rouge */
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      overflow:hidden;
+      background:
+        radial-gradient(1200px 800px at 20% 10%, rgba(120,140,255,.18), transparent 60%),
+        radial-gradient(1000px 800px at 80% 0%, rgba(61,255,155,.10), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      color:var(--txt);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Arial, sans-serif;
+    }
+
+    .pixel{
+      font-family:
+        "Press Start 2P","VT323","Fixedsys","Terminal","Lucida Console",
+        ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      letter-spacing:.7px;
+    }
+
+    .ca{ color: var(--colA); font-weight:1000; }
+    .cb{ color: var(--colB); font-weight:1000; }
+    .cc{ color: var(--colC); font-weight:1000; }
+    .cx{ color: var(--colX); font-weight:1000; }
+
+    .topbar{
+      height:64px;
+      padding:10px 12px;
+      border-bottom:1px solid var(--stroke);
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .leftTop{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+    .titleRow{ display:flex; align-items:baseline; gap:10px; min-width:0; flex-wrap:wrap; }
+    .title{ font-size:22px; font-weight:1000; white-space:nowrap; }
+    .secretLink{
+      font-size:12px; font-style:italic; font-weight:900;
+      opacity:.12; color: rgba(238,242,255,.95);
+      text-decoration:none; white-space:nowrap;
+    }
+    .secretLink:hover{ opacity:.24; text-decoration:underline; }
+    .tagline{
+      font-size:12px; font-style:italic; font-weight:900;
+      color: rgba(238,242,255,.80);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      max-width:min(70vw, 900px);
+    }
+
+    .rightTop{
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+      justify-content:flex-end;
+      font-variant-numeric: tabular-nums;
+    }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:9px 11px; border-radius:999px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.06);
+      box-shadow: 0 10px 22px rgba(0,0,0,.20);
+      font-size:12px; font-weight:1000; letter-spacing:.2px;
+      white-space:nowrap;
+    }
+    .pillBig{ padding:9px 12px; font-size:12px; min-width:150px; justify-content:center; }
+    #hearts{ letter-spacing:1px; }
+
+    button{
+      border:1px solid var(--stroke);
+      border-radius:16px;
+      padding:10px 12px;
+      font-weight:1000;
+      letter-spacing:.4px;
+      cursor:pointer;
+      background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.08));
+      color: var(--txt);
+      box-shadow: 0 10px 25px rgba(0,0,0,.35);
+      transition: transform .08s ease, filter .12s ease, opacity .12s ease;
+      user-select:none;
+      white-space:nowrap;
+    }
+    button:hover{ filter: brightness(1.06); }
+    button:active{ transform: translateY(1px) scale(.995); }
+    button:disabled{ opacity:.55; cursor:not-allowed; filter:none; }
+
+    .primary{
+      background: linear-gradient(180deg, rgba(61,255,155,.32), rgba(61,255,155,.12));
+      border-color: rgba(61,255,155,.22);
+    }
+    .danger{
+      background: linear-gradient(180deg, rgba(255,92,122,.35), rgba(255,92,122,.14));
+      border-color: rgba(255,92,122,.28);
+    }
+    .blue{
+      background: linear-gradient(180deg, rgba(122,166,255,.38), rgba(122,166,255,.16));
+      border-color: rgba(122,166,255,.24);
+    }
+    .mini{ font-size:12px; padding:9px 11px; border-radius:14px; opacity:.94; }
+    .iconBtn{ padding:9px 11px; border-radius:14px; font-size:12px; }
+
+    .mainRow{ height:calc(100vh - 64px); display:flex; min-height:0; }
+    .canvasWrap{ flex:1 1 auto; position:relative; min-width:0; background: rgba(10,14,28,.18); }
+    canvas#mainCanvas{ width:100%; height:100%; display:block; }
+
+    .sidePanel{
+      flex:0 0 380px; width:380px;
+      border-left:1px solid var(--stroke);
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding:12px;
+      overflow:auto;
+      position:relative;
+    }
+
+    .card{
+      background: rgba(255,255,255,.08);
+      border:1px solid var(--stroke);
+      border-radius:16px;
+      padding:10px 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.32);
+      position:relative;
+      overflow:hidden;
+      margin-bottom:10px;
+    }
+    .card::after{
+      content:"";
+      position:absolute; inset:-45%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.10), transparent 55%);
+      transform: rotate(12deg);
+      pointer-events:none;
+    }
+    .labelRow{
+      display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+      position:relative; z-index:1;
+    }
+    .label{
+      font-size:12px; font-weight:1000;
+      display:flex; align-items:center; gap:8px;
+      white-space:nowrap;
+    }
+    .value{
+      font-size:12px; color: var(--muted);
+      font-weight:1000; white-space:nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .underNote{
+      margin-top:8px;
+      font-size:12px;
+      font-weight:900;
+      opacity:.92;
+      position:relative;
+      z-index:1;
+      line-height:1.25;
+    }
+
+    input[type="text"], input[type="number"]{
+      border-radius:12px;
+      border:1px solid var(--stroke);
+      padding:10px 10px;
+      background: rgba(255,255,255,.06);
+      color: var(--txt);
+      font-weight:1000;
+      letter-spacing:.2px;
+      font-variant-numeric: tabular-nums;
+      outline:none;
+      width:100%;
+    }
+    input::placeholder{ color: rgba(238,242,255,.45); font-weight:900; }
+
+    .range{ margin-top:8px; position:relative; z-index:1; }
+    input[type="range"]{ width:100%; accent-color: #7aa6ff; }
+
+    .coordWrap{
+      display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;
+      font-weight:1000; position:relative; z-index:1;
+    }
+    .paren{ font-size:18px; opacity:.92; }
+    .semi{ font-size:18px; opacity:.92; }
+    .coordWrap input{ width:118px; max-width:36vw; text-align:center; }
+
+    .btnCol{ display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+
+    .hint{ font-size:12px; font-weight:900; opacity:.92; line-height:1.25; }
+    .ok{ color: var(--ok); }
+    .bad{ color: var(--bad); }
+    .warn{ color: var(--warn); }
+    .help{ color: var(--help); }
+
+    .toast{
+      position:absolute;
+      left:12px; bottom:12px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--stroke);
+      background: rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      font-size:13px;
+      font-weight:900;
+      color: rgba(238,242,255,.95);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      max-width:min(640px, 92vw);
+      pointer-events:none;
+      opacity:0;
+      transform: translateY(6px);
+      transition: opacity .18s ease, transform .18s ease;
+      z-index:6;
+    }
+    .toast.show{ opacity:1; transform: translateY(0); }
+
+    .cornerTimer{
+      position:absolute;
+      left:12px; top:10px;
+      z-index:6;
+      display:none;
+      pointer-events:none;
+      text-shadow: 0 14px 45px rgba(0,0,0,.55);
+    }
+    .cornerTimer.show{ display:block; }
+    .cornerTimer .t{ font-size:46px; font-weight:1000; letter-spacing:1px; line-height:1; }
+    .cornerTimer .sub{ margin-top:4px; font-size:12px; opacity:.88; font-weight:900; }
+
+    .popupWrap{ position:absolute; inset:0; display:none; pointer-events:none; z-index:7; }
+    .popupWrap.show{ display:block; }
+    .popup{
+      position:absolute;
+      pointer-events:auto;
+      width:min(760px, 94vw);
+      border-radius:18px;
+      border:1px solid var(--stroke);
+      background: rgba(0,0,0,.26);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 18px 50px rgba(0,0,0,.55);
+      padding:14px 14px 12px;
+      animation: pop .16s ease forwards;
+    }
+    @keyframes pop{
+      from{ transform: translate(-50%,-50%) scale(.985); opacity:0; }
+      to{ transform: translate(-50%,-50%) scale(1); opacity:1; }
+    }
+    .popupTitle{ font-weight:1000; letter-spacing:.3px; font-size:15px; margin-bottom:8px; }
+    .popupText{
+      font-size:13px; font-weight:900; color: rgba(238,242,255,.92);
+      line-height:1.32; white-space:pre-wrap;
+    }
+    .popupActions{ margin-top:12px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+    .closeRow{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; }
+    .closeRow .spacer{ flex:1; }
+    .xbtn{ border-radius:12px; padding:8px 10px; font-size:12px; opacity:.9; }
+
+    .sidePop{
+      display:none;
+      position:absolute;
+      inset:10px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.20);
+      background: rgba(0,0,0,.42);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 18px 45px rgba(0,0,0,.55);
+      padding:12px;
+      z-index:3;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+    }
+    .sidePop.show{ display:flex; }
+    .sidePop .big{
+      font-size:34px; font-weight:1000; letter-spacing:1px; line-height:1.05;
+    }
+    .sidePop .small{
+      margin-top:10px;
+      font-size:13px; font-weight:900; opacity:.92; line-height:1.25;
+      white-space:pre-wrap;
+    }
+
+    @media (max-width: 980px){
+      .mainRow{ flex-direction:column; }
+      .sidePanel{
+        width:100%; flex:0 0 auto;
+        border-left:none; border-top:1px solid var(--stroke);
+        max-height: 46vh;
+      }
+      .canvasWrap{ height:54vh; }
+    }
+    @media (max-width: 560px){
+      .title{ font-size:20px; }
+      .cornerTimer .t{ font-size:40px; }
+      .sidePanel{ padding:10px; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="leftTop">
+      <div class="titleRow">
+        <div class="title pixel">XY Shooter</div>
+        <a class="secretLink" href="https://mathsxp.odoo.com" target="_blank" rel="noopener noreferrer">// Tom Rougeaud</a>
+      </div>
+      <div class="tagline" id="tagline"><i>repérage • affine • second degré • Δ</i></div>
+    </div>
+
+    <div class="rightTop">
+      <span class="pill pillBig">🧭 <span id="modeLabel">Menu</span></span>
+      <span class="pill">🏁 <span id="score">0</span></span>
+      <span class="pill"><span style="opacity:.92;">VIES</span> <span id="hearts">—</span></span>
+
+      <button id="resetBtn" class="mini" title="Réinitialiser (retour menu / changer de mode)">Réinitialiser</button>
+      <button id="fsBtn" class="iconBtn mini" title="Plein écran">⛶</button>
+      <button id="soundBtn" class="iconBtn mini" title="Son ON/OFF">🔊</button>
+      <button id="exportBtn" class="iconBtn mini" title="Exporter .html">Exporter .html</button>
+    </div>
+  </header>
+
+  <div class="mainRow">
+    <div class="canvasWrap" id="canvasWrap">
+      <canvas id="mainCanvas" width="956" height="709"></canvas>
+
+      <div class="cornerTimer" id="cornerTimer">
+        <div class="t" id="cornerTime">20</div>
+        <div class="sub" id="cornerSub">Test coordonnées • 1/6</div>
+      </div>
+
+      <div class="toast" id="toast">C'est parti !</div>
+
+      <div class="popupWrap" id="popupWrap" aria-live="polite">
+        <div class="popup" id="popup">
+          <div class="closeRow">
+            <div class="popupTitle" id="popupTitle">—</div>
+            <div class="spacer"></div>
+            <button class="xbtn mini" id="popupCloseBtn" title="Fermer">✕</button>
+          </div>
+          <div class="popupText" id="popupText">—</div>
+          <div id="popupCustom"></div>
+          <div class="popupActions" id="popupActions"></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="sidePanel" id="sidePanel"><div>
+      <div class="card">
+        <div class="labelRow">
+          <div class="label">📌 Choisis un mode</div>
+          <div class="value">Test → vies ❤️</div>
+        </div>
+        <div class="underNote">
+          Test de lecture de coordonnées (6 points).<br>
+          Bonnes réponses = vies de départ.
+        </div>
+      </div>
+
+      <div class="btnCol">
+        <button id="btnAffine" class="blue">MODE AFFINE</button>
+        <button id="btnQuad" class="blue">MODE SECOND DEGRÉ</button>
+      </div>
+    </div></aside>
+  </div>
+
+<script>
+const CFG = Object.freeze({
+  SCORE_TO_WIN: 10,
+  LIVES_MAX_TEST: 6,
+  LIVES_MAX_GAME: 6,
+  TOAST_SEC: 1.4,
+
+  TEST_POINTS: 6,
+  TEST_TIME: 20.0,
+  TEST_TOL: 0.2,
+  TEST_HALF_RATE: 0.25,
+  TEST_MAX_ABS: 9.0,
+
+  AFFINE_HIT_TOL: 0.35,
+  AFFINE_MAX_SHOT_SEC: 10,
+
+  G: 9.8,
+  SIM_DT: 0.02,
+  V0_MIN: 2.2,
+  V0_MAX: 18.5,
+  QUAD_MAX_SHOT_SEC: 10,
+  TARGET_HIT_RADIUS_U: 0.55,
+
+  SPAWN_TRIES: 260,
+  TARGET_MIN_DIST: 3.0,
+
+  AFFINE_HELP_TOL: 0.1,
+  QUAD_HELP_TOL: 0.1,
+
+  DELTA_TOL: 0.1,
+  ROOT_TOL: 0.1,
+
+  // ✅ quiz sommet (coeffs aléatoires) : bornes raisonnables
+  VERTEX_QUIZ_TRIES: 240,
+  VERTEX_A_MINABS: 0.2,
+  VERTEX_X_ABS_MAX: 10,
+  VERTEX_Y_ABS_MAX: 10,
+});
+
+const View = Object.freeze({ FULL:'FULL', POS:'POS' });
+const Screen = Object.freeze({
+  MENU:'MENU',
+  TEST_INTRO:'TEST_INTRO',
+  TEST_RUNNING:'TEST_RUNNING',
+  AFFINE:'AFFINE',
+  QUAD:'QUAD',
+  WIN:'WIN',
+  GAME_OVER:'GAME_OVER',
+});
+const ShotState = Object.freeze({ READY:'READY', FIRING:'FIRING', RESOLVING:'RESOLVING' });
+
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp  = (a,b,t)=>a+(b-a)*t;
+const deg2rad = d => d*Math.PI/180;
+
+function parseNumFlex(s){
+  if (s == null) return null;
+  let t = String(s).trim();
+  if (!t) return null;
+  t = t.replace(/\s+/g,'').replace(',', '.').replace('−','-');
+  if (t.includes('/')){
+    const parts = t.split('/');
+    if (parts.length !== 2) return null;
+    const n = Number(parts[0]), d = Number(parts[1]);
+    if (!Number.isFinite(n) || !Number.isFinite(d) || d === 0) return null;
+    const v = n/d;
+    return Number.isFinite(v) ? v : null;
+  }
+  const v = Number(t);
+  return Number.isFinite(v) ? v : null;
+}
+
+function fmt(n, decimals=2){
+  const v = Number(n);
+  if (!Number.isFinite(v)) return '0';
+  const s = v.toFixed(decimals)
+    .replace(/\.0+$/,'')
+    .replace(/(\.\d*?)0+$/,'$1');
+  return s;
+}
+function fmtEqAffine(a,b){
+  const A = fmt(a,2);
+  const B = fmt(Math.abs(b),2);
+  const bSign = (b >= 0) ? ' + ' : ' - ';
+  return `y = ${A}x${bSign}${B}`;
+}
+
+function parseAffineExpression(raw){
+  if (raw == null) return null;
+  let s = String(raw).trim().toLowerCase();
+  if (!s) return null;
+  s = s.replace(/\s+/g,'').replace(',', '.').replace('−','-').replace(/\*/g,'');
+  if (s.startsWith('y=')) s = s.slice(2);
+
+  const ix = s.indexOf('x');
+  if (ix === -1) return null;
+
+  const aPart = s.slice(0, ix);
+  let rest = s.slice(ix+1);
+
+  let a;
+  if (aPart === '' || aPart === '+') a = 1;
+  else if (aPart === '-') a = -1;
+  else a = parseNumFlex(aPart);
+  if (a === null) return null;
+
+  let b = 0;
+  if (rest === '') b = 0;
+  else{
+    const sign = rest[0];
+    if (sign !== '+' && sign !== '-') return null;
+    const bPart = rest.slice(1);
+    const bv = parseNumFlex(bPart);
+    if (bv === null) return null;
+    b = (sign === '+') ? bv : -bv;
+  }
+  return {a,b};
+}
+
+function dist2(a,b){ return (a.x-b.x)**2 + (a.y-b.y)**2; }
+
+function segCircleWorld(p1, p2, c, r){
+  const dx = p2.x - p1.x, dy = p2.y - p1.y;
+  const l2 = dx*dx + dy*dy;
+  if (l2 === 0){
+    const d2 = (p1.x-c.x)**2 + (p1.y-c.y)**2;
+    return d2 <= r*r;
+  }
+  let t = ((c.x - p1.x)*dx + (c.y - p1.y)*dy) / l2;
+  t = clamp(t, 0, 1);
+  const cx = p1.x + t*dx, cy = p1.y + t*dy;
+  const d2 = (cx-c.x)**2 + (cy-c.y)**2;
+  return d2 <= r*r;
+}
+
+class PewAudio{
+  constructor(){ this.ctx=null; this.on=true; }
+  ensure(){ if(!this.ctx) this.ctx = new (window.AudioContext||window.webkitAudioContext)(); }
+  toggle(){ this.on=!this.on; }
+  play(){
+    if(!this.on) return;
+    try{
+      this.ensure();
+      const ac=this.ctx, t0=ac.currentTime;
+      const o1=ac.createOscillator(), o2=ac.createOscillator();
+      const g=ac.createGain(), f=ac.createBiquadFilter();
+      f.type='lowpass';
+      f.frequency.setValueAtTime(1600,t0);
+      f.frequency.exponentialRampToValueAtTime(520,t0+.18);
+      o1.type='sawtooth'; o2.type='sine';
+      o1.frequency.setValueAtTime(980,t0);
+      o1.frequency.exponentialRampToValueAtTime(240,t0+.18);
+      o2.frequency.setValueAtTime(560,t0);
+      o2.frequency.exponentialRampToValueAtTime(280,t0+.16);
+      g.gain.setValueAtTime(0.0001,t0);
+      g.gain.exponentialRampToValueAtTime(0.10,t0+.015);
+      g.gain.exponentialRampToValueAtTime(0.0001,t0+.22);
+      o1.connect(f); o2.connect(f); f.connect(g).connect(ac.destination);
+      o1.start(t0); o2.start(t0);
+      o1.stop(t0+.24); o2.stop(t0+.22);
+    }catch(_){}
+  }
+}
+
+class Renderer{
+  constructor(canvas){
+    this.cv=canvas;
+    this.ctx=canvas.getContext('2d');
+    this.dpr=1; this.w=1; this.h=1;
+    this.margins={left:56,right:20,top:20,bottom:22};
+
+    this.viewMode = View.FULL;
+    this.world = {xMin:-10, xMax:10, yMin:-10, yMax:10};
+
+    this.scale=40;
+    this.plot = {left:0, top:0, w:0, h:0};
+    this.originPx = {x:0,y:0};
+  }
+
+  css(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  setView(mode){
+    this.viewMode = mode;
+    if (mode === View.POS){
+      this.world = {xMin:0, xMax:10, yMin:0, yMax:10};
+    }else{
+      this.world = {xMin:-10, xMax:10, yMin:-10, yMax:10};
+    }
+    this.resize();
+  }
+
+  resize(){
+    const rect=this.cv.getBoundingClientRect();
+    this.w=Math.max(1, rect.width);
+    this.h=Math.max(1, rect.height);
+    this.dpr=window.devicePixelRatio||1;
+    this.cv.width=Math.floor(this.w*this.dpr);
+    this.cv.height=Math.floor(this.h*this.dpr);
+    this.ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
+
+    const availW = Math.max(280, this.w - this.margins.left - this.margins.right);
+    const availH = Math.max(240, this.h - this.margins.top  - this.margins.bottom);
+
+    const {xMin,xMax,yMin,yMax} = this.world;
+    const worldW = (xMax - xMin);
+    const worldH = (yMax - yMin);
+
+    this.scale = Math.min(availW / worldW, availH / worldH);
+
+    const plotW = worldW * this.scale;
+    const plotH = worldH * this.scale;
+
+    const plotLeft = this.margins.left + (availW - plotW)/2;
+    const plotTop  = this.margins.top  + (availH - plotH)/2;
+
+    this.plot = {left: plotLeft, top: plotTop, w: plotW, h: plotH};
+
+    this.originPx.x = plotLeft + (-xMin) * this.scale;
+    this.originPx.y = plotTop  + (yMax)  * this.scale;
+  }
+
+  w2p(pt){
+    const {xMin, yMax} = this.world;
+    return {
+      x: this.plot.left + (pt.x - xMin) * this.scale,
+      y: this.plot.top  + (yMax - pt.y) * this.scale
+    };
+  }
+
+  clear(){ this.ctx.clearRect(0,0,this.w,this.h); }
+
+  clipPlot(){
+    const ctx=this.ctx;
+    ctx.beginPath();
+    ctx.rect(this.plot.left, this.plot.top, this.plot.w, this.plot.h);
+    ctx.clip();
+  }
+
+  drawGrid(){
+    const ctx=this.ctx;
+    const {xMin,xMax,yMin,yMax} = this.world;
+
+    this.clear();
+
+    ctx.save();
+    this.clipPlot();
+
+    const boldSet = new Set([-10,-5,5,10]);
+
+    for(let i=xMin;i<=xMax;i++){
+      const x = this.plot.left + (i - xMin)*this.scale;
+      const isAxis = (i === 0);
+      const isBold = boldSet.has(i);
+
+      ctx.strokeStyle = isBold ? this.css('--gridBold') : this.css('--gridThin');
+      ctx.lineWidth = isAxis ? 2.8 : (isBold ? 2.2 : 1);
+
+      ctx.beginPath();
+      ctx.moveTo(x, this.plot.top);
+      ctx.lineTo(x, this.plot.top + this.plot.h);
+      ctx.stroke();
+    }
+
+    for(let j=yMin;j<=yMax;j++){
+      const y = this.plot.top + (yMax - j)*this.scale;
+      const isAxis = (j === 0);
+      const isBold = boldSet.has(j);
+
+      ctx.strokeStyle = isBold ? this.css('--gridBold') : this.css('--gridThin');
+      ctx.lineWidth = isAxis ? 2.8 : (isBold ? 2.2 : 1);
+
+      ctx.beginPath();
+      ctx.moveTo(this.plot.left, y);
+      ctx.lineTo(this.plot.left + this.plot.w, y);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = this.css('--axes');
+    ctx.lineWidth = 3.2;
+
+    if (yMin <= 0 && yMax >= 0){
+      const y0 = this.originPx.y;
+      ctx.beginPath();
+      ctx.moveTo(this.plot.left, y0);
+      ctx.lineTo(this.plot.left + this.plot.w, y0);
+      ctx.stroke();
+    }
+    if (xMin <= 0 && xMax >= 0){
+      const x0 = this.originPx.x;
+      ctx.beginPath();
+      ctx.moveTo(x0, this.plot.top);
+      ctx.lineTo(x0, this.plot.top + this.plot.h);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
+    const major = [-10,-5,0,5,10];
+    ctx.save();
+    ctx.fillStyle='rgba(238,242,255,.92)';
+    ctx.font='900 12px system-ui,-apple-system,Segoe UI,Roboto,Arial';
+    ctx.strokeStyle='rgba(235,245,255,.55)';
+    ctx.lineWidth=1.4;
+
+    if (yMin <= 0 && yMax >= 0){
+      const y0 = this.originPx.y;
+      ctx.textAlign='center';
+      ctx.textBaseline='top';
+
+      for(const i of major){
+        if (i < xMin || i > xMax) continue;
+        const x = this.plot.left + (i - xMin)*this.scale;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y0);
+        ctx.lineTo(x, y0 + 8);
+        ctx.stroke();
+
+        if (i !== 0) ctx.fillText(String(i), x, y0 + 10);
+      }
+    }
+
+    if (xMin <= 0 && xMax >= 0){
+      const x0 = this.originPx.x;
+      ctx.textAlign='right';
+      ctx.textBaseline='middle';
+
+      for(const j of major){
+        if (j < yMin || j > yMax) continue;
+        const y = this.plot.top + (yMax - j)*this.scale;
+
+        ctx.beginPath();
+        ctx.moveTo(x0, y);
+        ctx.lineTo(x0 - 8, y);
+        ctx.stroke();
+
+        if (j !== 0) ctx.fillText(String(j), x0 - 12, y);
+      }
+    }
+
+    if (xMin <= 0 && xMax >= 0 && yMin <= 0 && yMax >= 0){
+      ctx.textAlign='left';
+      ctx.textBaseline='top';
+      ctx.fillText('0', this.originPx.x + 6, this.originPx.y + 6);
+    }
+
+    ctx.textAlign='left';
+    ctx.textBaseline='bottom';
+    ctx.fillText('x', this.plot.left + this.plot.w - 10, (yMin<=0 && yMax>=0) ? (this.originPx.y - 6) : (this.plot.top + this.plot.h - 6));
+    ctx.textBaseline='top';
+    ctx.fillText('y', (xMin<=0 && xMax>=0) ? (this.originPx.x + 8) : (this.plot.left + 8), this.plot.top + 6);
+
+    ctx.restore();
+  }
+
+  drawTarget(target, bounce=0){
+    const ctx=this.ctx;
+    const p=this.w2p(target);
+
+    ctx.save();
+    ctx.globalAlpha=0.16;
+    ctx.fillStyle='rgba(255,255,255,.9)';
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,18,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    const s=1+0.12*Math.sin(performance.now()/120)*Math.max(0,bounce);
+    ctx.save();
+    ctx.font = `${Math.round(34*s)}px system-ui, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText('🎯', p.x, p.y);
+    ctx.restore();
+  }
+
+  drawPolyline(pts, endIndex, dashed=false, color='rgba(255,43,43,1)', width=3.2){
+    if(!pts || pts.length<2) return;
+    const ctx=this.ctx;
+    const maxI=pts.length-1;
+    const endI=clamp(endIndex, 1, maxI);
+
+    ctx.save();
+    ctx.strokeStyle=color;
+    ctx.lineWidth=width;
+    ctx.lineJoin='round';
+    ctx.lineCap='round';
+    if(dashed) ctx.setLineDash([10,7]);
+
+    ctx.save();
+    this.clipPlot();
+
+    const p0=this.w2p(pts[0]);
+    ctx.beginPath();
+    ctx.moveTo(p0.x,p0.y);
+    for(let i=1;i<=endI;i++){
+      const pi=this.w2p(pts[i]);
+      ctx.lineTo(pi.x,pi.y);
+    }
+    ctx.stroke();
+
+    ctx.restore();
+    if(dashed) ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  drawCrossMarker(pt, color='rgba(255,211,77,.98)', sizePx=11, width=3){
+    const ctx=this.ctx;
+    const p=this.w2p(pt);
+    ctx.save();
+    ctx.strokeStyle=color;
+    ctx.lineWidth=width;
+    ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(p.x - sizePx, p.y);
+    ctx.lineTo(p.x + sizePx, p.y);
+    ctx.moveTo(p.x, p.y - sizePx);
+    ctx.lineTo(p.x, p.y + sizePx);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawCrossWithLabel(pt, label, color='rgba(122,166,255,.95)'){
+    const ctx=this.ctx;
+    const p=this.w2p(pt);
+    ctx.save();
+    ctx.strokeStyle=color;
+    ctx.lineWidth=2.4;
+    ctx.beginPath();
+    ctx.moveTo(p.x-8,p.y);
+    ctx.lineTo(p.x+8,p.y);
+    ctx.moveTo(p.x,p.y-8);
+    ctx.lineTo(p.x,p.y+8);
+    ctx.stroke();
+
+    ctx.fillStyle='rgba(238,242,255,.92)';
+    ctx.font='900 12px system-ui,-apple-system,Segoe UI,Roboto,Arial';
+    ctx.textAlign='left';
+    ctx.textBaseline='bottom';
+    ctx.fillText(label, p.x+10, p.y-8);
+    ctx.restore();
+  }
+
+  drawOverlayShade(alpha=0.10){
+    const ctx=this.ctx;
+    ctx.save();
+    ctx.fillStyle=`rgba(0,0,0,${alpha})`;
+    ctx.fillRect(0,0,this.w,this.h);
+    ctx.restore();
+  }
+}
+
+class Game{
+  constructor(){
+    this.cv = document.getElementById('mainCanvas');
+    this.sidePanel = document.getElementById('sidePanel');
+
+    this.modeLabel = document.getElementById('modeLabel');
+    this.scoreEl   = document.getElementById('score');
+    this.heartsEl  = document.getElementById('hearts');
+
+    this.toastEl = document.getElementById('toast');
+
+    this.cornerTimer = document.getElementById('cornerTimer');
+    this.cornerTime  = document.getElementById('cornerTime');
+    this.cornerSub   = document.getElementById('cornerSub');
+
+    this.popupWrap = document.getElementById('popupWrap');
+    this.popup = document.getElementById('popup');
+    this.popupTitle = document.getElementById('popupTitle');
+    this.popupText = document.getElementById('popupText');
+    this.popupActions = document.getElementById('popupActions');
+    this.popupCustom = document.getElementById('popupCustom');
+    this.popupCloseBtn = document.getElementById('popupCloseBtn');
+
+    this.resetBtn = document.getElementById('resetBtn');
+    this.fsBtn = document.getElementById('fsBtn');
+    this.soundBtn = document.getElementById('soundBtn');
+    this.exportBtn = document.getElementById('exportBtn');
+
+    this.r = new Renderer(this.cv);
+    this.audio = new PewAudio();
+
+    this.screen = Screen.MENU;
+    this.chosenMode = null;
+    this.score = 0;
+    this.lives = 0;
+
+    this.testIndex = 0;
+    this.testCorrect = 0;
+    this.testPoint = {x:0,y:0};
+    this.testTimeLeft = 0;
+    this.testAnswered = false;
+
+    this.affine = {
+      shot: ShotState.READY,
+      start: {x:0,y:0},
+      target: {x:6,y:4},
+      bounce: 0,
+      eqParsed: null,
+      linePts: [],
+      revealIndex: 0,
+      revealCarry: 0,
+      firingElapsed: 0,
+      drawPps: 30,
+      lastTarget: null,
+      ghostVisible: false,
+      askedHelpThisTarget: false,
+    };
+
+    this.quad = {
+      shot: ShotState.READY,
+      target: {x:8,y:5},
+      bounce: 0,
+      power: 60,
+      angle: 45,
+      trajPts: [],
+      revealIndex: 0,
+      revealCarry: 0,
+      firingElapsed: 0,
+      drawPps: 30,
+      lastTarget: null,
+      A: 0, B: 0, C: 0,
+      vertex: {x:0,y:0},
+      ghostVisible: false,
+
+      mustChangePower: false,
+      lastShotPower: null,
+    };
+
+    this.deltaQ = null;
+
+    this.toastTimer = 0;
+    this.last = performance.now();
+    this.dirty = true;
+  }
+
+  init(){
+    this.bind();
+    this.r.setView(View.FULL);
+    this.goMenu();
+    this.showToast("C'est parti !", 1.2);
+    requestAnimationFrame(this.loop);
+  }
+
+  bind(){
+    window.addEventListener('resize', ()=>{ this.r.resize(); this.dirty = true; });
+
+    this.resetBtn.addEventListener('click', ()=>this.goMenu());
+
+    this.fsBtn.addEventListener('click', ()=>this.toggleFullscreen());
+
+    this.soundBtn.addEventListener('click', ()=>{
+      this.audio.toggle();
+      this.soundBtn.textContent = this.audio.on ? '🔊' : '🔇';
+      this.showToast(this.audio.on ? 'Son activé' : 'Son coupé', 1.0);
+    });
+
+    this.exportBtn.addEventListener('click', ()=>this.exportHtml());
+    this.popupCloseBtn.addEventListener('click', ()=>this.hidePopup());
+
+    window.addEventListener('keydown', (e)=>{
+      if ([' ', 'ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
+        if (this.screen !== Screen.MENU) e.preventDefault();
+      }
+    }, {passive:false});
+  }
+
+  setModeLabel(s){ this.modeLabel.textContent = s; }
+  setScore(n){ this.score = clamp(n,0,999); this.scoreEl.textContent = String(this.score); this.dirty=true; }
+  setLives(n){
+    this.lives = clamp(n,0,CFG.LIVES_MAX_GAME);
+    this.heartsEl.textContent = this.lives>0 ? '❤️'.repeat(this.lives) : '—';
+    this.dirty = true;
+  }
+
+  showToast(msg, seconds=CFG.TOAST_SEC){
+    this.toastEl.textContent = msg;
+    this.toastEl.classList.add('show');
+    this.toastTimer = seconds;
+  }
+
+  showCornerTimer(on, t=CFG.TEST_TIME, sub=''){
+    if(on){
+      this.cornerTimer.classList.add('show');
+      this.cornerTime.textContent = String(Math.max(0, Math.ceil(t)));
+      this.cornerSub.textContent = sub || '';
+    }else{
+      this.cornerTimer.classList.remove('show');
+    }
+  }
+
+  showPopup({title, text, closable=true, actions=[], customNode=null, width=null}){
+    this.popupTitle.textContent = title || '';
+    this.popupText.textContent = text || '';
+    this.popupCloseBtn.style.display = closable ? '' : 'none';
+
+    this.popupActions.innerHTML = '';
+    for(const a of actions){
+      const b = document.createElement('button');
+      b.textContent = a.label;
+      b.className = (a.kind==='primary') ? 'primary' : (a.kind==='danger' ? 'danger' : (a.kind==='blue' ? 'blue' : 'mini'));
+      if (a.disabled) b.disabled = true;
+      b.addEventListener('click', a.onClick);
+      this.popupActions.appendChild(b);
+    }
+
+    this.popupCustom.innerHTML = '';
+    if(customNode) this.popupCustom.appendChild(customNode);
+
+    this.popup.style.width = width || 'min(760px, 94vw)';
+    this.popup.style.left = '50%';
+    this.popup.style.top = '50%';
+    this.popupWrap.classList.add('show');
+    this.dirty = true;
+  }
+  hidePopup(){
+    this.popupWrap.classList.remove('show');
+    this.popupCustom.innerHTML = '';
+    this.dirty = true;
+  }
+
+  setSidePanel(nodeOrHtml){
+    this.sidePanel.innerHTML = '';
+    if (typeof nodeOrHtml === 'string') this.sidePanel.innerHTML = nodeOrHtml;
+    else if (nodeOrHtml) this.sidePanel.appendChild(nodeOrHtml);
+  }
+
+  addChangeModeButton(container){
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="underNote">Tu veux repartir sur l’autre mode ?</div>
+      <div class="btnCol">
+        <button id="changeModeBtn" class="mini">Changer de mode</button>
+      </div>
+    `;
+    container.appendChild(card);
+    card.querySelector('#changeModeBtn').addEventListener('click', ()=>this.goMenu());
+  }
+
+  goMenu(){
+    this.screen = Screen.MENU;
+    this.chosenMode = null;
+    this.r.setView(View.FULL);
+
+    this.setModeLabel('Menu');
+    this.setScore(0);
+    this.setLives(0);
+    this.showCornerTimer(false);
+    this.hidePopup();
+
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <div class="card">
+        <div class="labelRow">
+          <div class="label">📌 Choisis un mode</div>
+          <div class="value">Test → vies ❤️</div>
+        </div>
+        <div class="underNote">
+          Test de lecture de coordonnées (6 points).<br>
+          Bonnes réponses = vies de départ.
+        </div>
+      </div>
+
+      <div class="btnCol">
+        <button id="btnAffine" class="blue">MODE AFFINE</button>
+        <button id="btnQuad" class="blue">MODE SECOND DEGRÉ</button>
+      </div>
+    `;
+    this.setSidePanel(wrap);
+
+    wrap.querySelector('#btnAffine').addEventListener('click', ()=>this.startTestIntro('AFFINE'));
+    wrap.querySelector('#btnQuad').addEventListener('click', ()=>this.startTestIntro('QUAD'));
+
+    this.showToast('Choisis un mode.', 1.2);
+    this.dirty = true;
+  }
+
+  startTestIntro(mode){
+    this.chosenMode = mode;
+    this.screen = Screen.TEST_INTRO;
+    this.r.setView(View.FULL);
+    this.setModeLabel('Test coordonnées');
+    this.setScore(0);
+    this.setLives(0);
+    this.hidePopup();
+
+    this.renderTestPanel(false);
+
+    this.showPopup({
+      title: '📍 Test coordonnées',
+      text:
+`Tes réponses détermineront le nombre de vies ❤️.
+
+• 6 points à lire
+• ${CFG.TEST_TIME.toFixed(0)} secondes par point
+• Tolérance : ±${CFG.TEST_TOL} sur x et y
+
+Clique sur « Démarrer » quand tu es prêt.`,
+      closable: true,
+      actions: [
+        { label:'Démarrer', kind:'primary', onClick: ()=>{ this.hidePopup(); this.startTest(); } },
+      ]
+    });
+
+    this.dirty = true;
+  }
+
+  renderTestPanel(running){
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <div class="card" id="testCard">
+        <div class="labelRow">
+          <div class="label">🧠 Réponse</div>
+          <div class="value">(x ; y)</div>
+        </div>
+
+        <div class="coordWrap" style="margin-top:10px;">
+          <span class="paren">(</span>
+          <input id="testX" type="text" inputmode="decimal" placeholder="x" ${running?'':'disabled'} />
+          <span class="semi">;</span>
+          <input id="testY" type="text" inputmode="decimal" placeholder="y" ${running?'':'disabled'} />
+          <span class="paren">)</span>
+        </div>
+
+        <div class="underNote" id="testMsg">${running ? 'Valide avant la fin du timer.' : 'Clique “Démarrer”.'}</div>
+
+        <div class="btnCol">
+          <button id="testValidate" class="primary" ${running?'':'disabled'}>Valider</button>
+          <button id="testSkip" class="mini" ${running?'':'disabled'}>Passer</button>
+        </div>
+
+        <div class="sidePop" id="testPop">
+          <div>
+            <div class="big" id="testPopBig">—</div>
+            <div class="small" id="testPopSmall">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="underNote">
+          Points simples : <b>entiers</b> et parfois <b>.5</b> (ex : 5.5 ; -7.5).<br>
+          Tolérance : <b>±${CFG.TEST_TOL}</b>.
+        </div>
+      </div>
+    `;
+    this.addChangeModeButton(wrap);
+    this.setSidePanel(wrap);
+
+    const xEl = wrap.querySelector('#testX');
+    const yEl = wrap.querySelector('#testY');
+    const msgEl = wrap.querySelector('#testMsg');
+    const btnV = wrap.querySelector('#testValidate');
+    const btnS = wrap.querySelector('#testSkip');
+
+    const pop = wrap.querySelector('#testPop');
+    const popBig = wrap.querySelector('#testPopBig');
+    const popSmall = wrap.querySelector('#testPopSmall');
+
+    this.testUI = {xEl,yEl,msgEl,btnV,btnS,pop,popBig,popSmall};
+
+    btnV.addEventListener('click', ()=>this.submitTestAnswer(true));
+    btnS.addEventListener('click', ()=>this.submitTestAnswer(false));
+    [xEl,yEl].forEach(inp=>{
+      inp.addEventListener('keydown',(e)=>{ if(e.key==='Enter') this.submitTestAnswer(true); });
+    });
+  }
+
+  startTest(){
+    this.screen = Screen.TEST_RUNNING;
+    this.testIndex = 0;
+    this.testCorrect = 0;
+    this.renderTestPanel(true);
+    this.nextTestPoint();
+    this.showToast('C’est parti !', 1.0);
+    this.dirty = true;
+  }
+
+  pickFromSet(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  randomSimpleCoord(min, max){
+    if (min > max) [min, max] = [max, min];
+    const minI = Math.ceil(min);
+    const maxI = Math.floor(max);
+    const base = (minI <= maxI)
+      ? (minI + Math.floor(Math.random() * (maxI - minI + 1)))
+      : (min + Math.random() * (max - min));
+
+    if (Math.random() < CFG.TEST_HALF_RATE){
+      const off = (Math.random() < 0.5) ? 0.5 : -0.5;
+      const cand = base + off;
+      if (cand >= min && cand <= max) return cand;
+    }
+    return clamp(Math.round(base), min, max);
+  }
+
+  nextTestPoint(){
+    const min = -CFG.TEST_MAX_ABS;
+    const max =  CFG.TEST_MAX_ABS;
+
+    for(let k=0;k<300;k++){
+      let x = this.randomSimpleCoord(min, max);
+      let y = this.randomSimpleCoord(min, max);
+
+      x = Math.round(x*2)/2;
+      y = Math.round(y*2)/2;
+
+      if (Math.abs(x) < 0.5 && Math.abs(y) < 0.5) continue;
+      this.testPoint = {x,y};
+      break;
+    }
+
+    this.testAnswered = false;
+    this.testTimeLeft = CFG.TEST_TIME;
+
+    if (this.testUI){
+      this.testUI.xEl.value = '';
+      this.testUI.yEl.value = '';
+      this.testUI.msgEl.textContent = `Point ${this.testIndex+1}/${CFG.TEST_POINTS} — tolérance ±${CFG.TEST_TOL}.`;
+      this.hideTestSidePop();
+      setTimeout(()=>this.testUI.xEl.focus(), 40);
+    }
+
+    this.showCornerTimer(true, this.testTimeLeft, `Test coordonnées • ${this.testIndex+1}/${CFG.TEST_POINTS}`);
+    this.dirty = true;
+  }
+
+  showTestSidePop(main, detail){
+    if (!this.testUI) return;
+    this.testUI.popBig.textContent = main;
+    this.testUI.popSmall.textContent = detail || '';
+    this.testUI.pop.classList.add('show');
+  }
+  hideTestSidePop(){
+    if (!this.testUI) return;
+    this.testUI.pop.classList.remove('show');
+  }
+
+  submitTestAnswer(explicit){
+    if (this.screen !== Screen.TEST_RUNNING) return;
+    if (this.testAnswered) return;
+
+    const timedOut = !explicit;
+    let ok = false;
+
+    if (explicit){
+      const x = parseNumFlex(this.testUI?.xEl.value);
+      const y = parseNumFlex(this.testUI?.yEl.value);
+      if (x !== null && y !== null){
+        ok = (Math.abs(x - this.testPoint.x) <= CFG.TEST_TOL && Math.abs(y - this.testPoint.y) <= CFG.TEST_TOL);
+      }
+    }
+
+    this.testAnswered = true;
+
+    const exp = `Bonne coordonnée : (${fmt(this.testPoint.x,1)} ; ${fmt(this.testPoint.y,1)})`;
+    if (ok){
+      this.testCorrect++;
+      this.showTestSidePop('✅ CORRECT', exp);
+    }else{
+      this.showTestSidePop(timedOut ? '⏱️ TEMPS' : '❌ FAUX', exp);
+    }
+
+    if (this.testUI){
+      this.testUI.xEl.disabled = true;
+      this.testUI.yEl.disabled = true;
+      this.testUI.btnV.disabled = true;
+      this.testUI.btnS.disabled = true;
+    }
+
+    setTimeout(()=>{
+      if (this.testUI){
+        this.testUI.xEl.disabled = false;
+        this.testUI.yEl.disabled = false;
+        this.testUI.btnV.disabled = false;
+        this.testUI.btnS.disabled = false;
+        this.hideTestSidePop();
+      }
+
+      this.testIndex++;
+      if (this.testIndex >= CFG.TEST_POINTS){
+        this.finishTest();
+      }else{
+        this.nextTestPoint();
+      }
+    }, 950);
+  }
+
+  finishTest(){
+    this.showCornerTimer(false);
+    const good = this.testCorrect;
+
+    if (good <= 0){
+      this.showPopup({
+        title: '🧭 Méthode : lire les coordonnées',
+        text:
+`Sur un repère :
+• x se lit sur l’axe horizontal (gauche/droite)
+• y se lit sur l’axe vertical (bas/haut)
+
+Pour lire un point :
+1) Descends/monte jusqu’à l’axe x → tu lis x
+2) Va à gauche/droite jusqu’à l’axe y → tu lis y
+
+Ex : P(-3 ; 2) = 3 à gauche et 2 vers le haut.`,
+        closable: false,
+        actions: [
+          { label:'Retente ta chance', kind:'primary', onClick: ()=>{ this.hidePopup(); this.startTest(); } },
+        ]
+      });
+      return;
+    }
+
+    const lives = clamp(good, 1, CFG.LIVES_MAX_TEST);
+    this.setLives(lives);
+
+    if (this.chosenMode === 'AFFINE') this.startAffineMode();
+    else this.startQuadMode();
+  }
+
+  /* =========================
+     AFFINE (inchangé)
+  ========================= */
+  spawnAffineStartAndTarget(){
+    const sy = (Math.random()<0.5 ? -1 : 1) * (1 + Math.floor(Math.random() * 8));
+    this.affine.start = {x:0, y: clamp(sy, -9, 9)};
+
+    for(let k=0;k<CFG.SPAWN_TRIES;k++){
+      const tx = Math.round(lerp(-9, 9, Math.random())*2)/2;
+      const ty = Math.round(lerp(-9, 9, Math.random())*2)/2;
+      const cand = {x:tx, y:ty};
+      if (Math.abs(tx) < 1.0 && Math.abs(ty) < 1.0) continue;
+      if (dist2(cand, this.affine.start) < 16) continue;
+      if (this.affine.lastTarget && dist2(cand, this.affine.lastTarget) < CFG.TARGET_MIN_DIST**2) continue;
+      if (Math.abs(tx) < 0.2) continue;
+
+      this.affine.target = cand;
+      this.affine.lastTarget = {...cand};
+      this.affine.bounce = 1;
+      break;
+    }
+
+    this.affine.eqParsed = null;
+    this.affine.linePts = [];
+    this.affine.ghostVisible = false;
+    this.affine.askedHelpThisTarget = false;
+  }
+
+  startAffineMode(){
+    this.screen = Screen.AFFINE;
+    this.r.setView(View.FULL);
+    this.setModeLabel('Mode affine');
+    this.setScore(0);
+    this.hidePopup();
+    this.showCornerTimer(false);
+
+    this.affine.shot = ShotState.READY;
+    this.spawnAffineStartAndTarget();
+    this.renderAffinePanel();
+
+    this.showToast('Mode affine : trouve y = ax + b.', 1.4);
+    this.dirty = true;
+  }
+
+  renderAffinePanel(){
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <div class="card">
+        <div class="labelRow">
+          <div class="label">🎯 Consigne</div>
+          <div class="value">droite y=ax+b</div>
+        </div>
+        <div class="underNote">
+          Trouve l’équation de la droite qui relie <b>la croix verte</b> (départ) et la <b>cible 🎯</b>.<br>
+          Tu dois déterminer :
+          <br>• <b>b</b> : l’ordonnée à l’origine (valeur de y quand x=0)
+          <br>• <b>a</b> : le coefficient directeur (pente).
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="labelRow">
+          <div class="label">🧾 Saisie</div>
+          <div class="value">y = ax + b</div>
+        </div>
+
+        <div class="underNote">
+          a et b : décimaux (virgule ou point) ou quotients (2/3).<br>
+          Exemple : <b>-1.5x-2</b> ou <b>2/3x+1/2</b>
+        </div>
+
+        <div style="margin-top:10px; position:relative; z-index:1;">
+          <input id="eqIn" type="text" placeholder="ex: 2x+3" />
+          <div class="underNote" id="eqHint"><span class="warn">Entre une équation valide.</span></div>
+        </div>
+
+        <div class="btnCol">
+          <button id="helpBtn" class="blue">(aide) afficher la droite</button>
+          <button id="fireBtn" class="danger">TIRER</button>
+          <button id="retryBtn" class="mini">Nouvelle cible</button>
+        </div>
+      </div>
+    `;
+    this.addChangeModeButton(wrap);
+    this.setSidePanel(wrap);
+
+    const eqIn = wrap.querySelector('#eqIn');
+    const eqHint = wrap.querySelector('#eqHint');
+    const helpBtn = wrap.querySelector('#helpBtn');
+    const fireBtn = wrap.querySelector('#fireBtn');
+    const retryBtn = wrap.querySelector('#retryBtn');
+
+    const syncEq = ()=>{
+      const parsed = parseAffineExpression(eqIn.value);
+      this.affine.eqParsed = parsed;
+      eqHint.innerHTML = parsed ? `<span class="ok">${fmtEqAffine(parsed.a, parsed.b)}</span>` :
+                                 `<span class="warn">Format : ax+b (ex: -2x+3)</span>`;
+      this.dirty = true;
+    };
+
+    eqIn.addEventListener('input', syncEq);
+    eqIn.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') this.fireAffine(); });
+
+    helpBtn.addEventListener('click', ()=>this.askHelpAffineFlow());
+    fireBtn.addEventListener('click', ()=>this.fireAffine());
+    retryBtn.addEventListener('click', ()=>{
+      this.spawnAffineStartAndTarget();
+      eqIn.value = '';
+      syncEq();
+      this.affine.shot = ShotState.READY;
+      this.dirty = true;
+    });
+
+    this.affineUI = {eqIn, eqHint, helpBtn, fireBtn, syncEq};
+    setTimeout(()=>eqIn.focus(), 80);
+    syncEq();
+  }
+
+  randomNonZeroHalf(min, max){
+    const vals = [];
+    for (let v=min; v<=max+1e-9; v+=0.5){
+      const vv = Math.round(v*2)/2;
+      if (Math.abs(vv) < 1e-9) continue;
+      vals.push(vv);
+    }
+    return this.pickFromSet(vals);
+  }
+  randomIntOrHalf(minI, maxI){
+    const x = minI + Math.floor(Math.random()*(maxI-minI+1));
+    if (x === 0) return (Math.random()<0.5 ? -1 : 1);
+    if (Math.random() < 0.25){
+      const s = Math.random()<0.5 ? -0.5 : 0.5;
+      return x + s;
+    }
+    return x;
+  }
+
+  askHelpAffineFlow(){
+    if (this.screen !== Screen.AFFINE) return;
+    if (this.affine.shot !== ShotState.READY) return;
+
+    this.showPopup({
+      title: '🧩 (aide) afficher la droite',
+      text:
+`Tu bloques vraiment ?
+
+Si tu confirmes :
+• tu répondras d’abord à une question (tolérance ±${CFG.AFFINE_HELP_TOL})
+• puis la trajectoire fantôme VERTE pourra s’afficher en temps réel (jusqu’à la cible suivante).`,
+      closable: true,
+      actions: [
+        { label:'Oui, je veux de l’aide', kind:'primary', onClick: ()=>{
+          this.hidePopup();
+          this.affine.askedHelpThisTarget = true;
+          this.unlockAffineGhostQuiz();
+        }},
+        { label:'Non, je continue', kind:'mini', onClick: ()=>this.hidePopup() },
+      ]
+    });
+  }
+
+  unlockAffineGhostQuiz(){
+    if (this.screen !== Screen.AFFINE) return;
+    if (this.affine.shot !== ShotState.READY) return;
+
+    const a = this.randomNonZeroHalf(-4, 4);
+    const b = this.randomNonZeroHalf(-8, 8);
+    const x0 = this.randomIntOrHalf(-6, 6);
+    const y0 = a*x0 + b;
+
+    const node = document.createElement('div');
+    node.style.marginTop = '10px';
+    node.innerHTML = `
+      <div class="hint">
+        On a : <b>y = <span class="ca">${fmt(a,2)}</span>x ${b>=0?'+':'-'} <span class="cb">${fmt(Math.abs(b),2)}</span></b>
+      </div>
+      <div class="hint" style="margin-top:8px;">
+        Calculer <b>y</b> pour <b>x = <span class="cx">${fmt(x0,1)}</span></b>.
+      </div>
+      <div class="hint" style="margin-top:8px;">
+        Repère les rôles :
+        <span class="ca">a = ${fmt(a,2)}</span> •
+        <span class="cb">b = ${fmt(b,2)}</span> •
+        <span class="cx">x = ${fmt(x0,1)}</span>
+      </div>
+
+      <div style="margin-top:10px;">
+        <input id="quizIn" type="text" inputmode="decimal" placeholder="Ta réponse pour y" style="width:240px; text-align:center;" />
+      </div>
+      <div class="underNote">Tolérance ±${CFG.AFFINE_HELP_TOL}</div>
+    `;
+    const inp = node.querySelector('#quizIn');
+
+    this.showPopup({
+      title: '🔓 Débloquer la trajectoire fantôme (affine)',
+      text:
+`Si c’est juste :
+• la droite fantôme VERTE s’affiche en direct
+• et on met automatiquement "x" dans le champ pour la voir tout de suite.`,
+      closable: true,
+      customNode: node,
+      actions: [
+        { label:'Valider', kind:'primary', onClick: ()=>{
+          const v = parseNumFlex(inp.value);
+          if (v === null){ this.showToast('Nombre attendu.', 1.0); return; }
+          const ok = Math.abs(v - y0) <= CFG.AFFINE_HELP_TOL;
+          this.hidePopup();
+          if (ok){
+            this.affine.ghostVisible = true;
+            if (this.affineUI){
+              this.affineUI.eqIn.value = 'x';
+              this.affineUI.syncEq();
+              this.affineUI.eqIn.focus();
+            }
+            this.showToast('✅ Trajectoire fantôme activée', 1.2);
+          }else{
+            this.showToast('❌ Faux : aide refusée', 1.2);
+          }
+          this.dirty = true;
+        }},
+        { label:'Annuler', kind:'mini', onClick: ()=>this.hidePopup() }
+      ]
+    });
+
+    setTimeout(()=>inp.focus(), 60);
+  }
+
+  affineLinePoints(a,b){
+    const step = 0.12;
+    const pts=[];
+    for(let x=-10; x<=10; x+=step) pts.push({x, y:a*x + b});
+    return pts;
+  }
+
+  fireAffine(){
+    if (this.screen !== Screen.AFFINE) return;
+    if (this.affine.shot !== ShotState.READY) return;
+    if (this.lives <= 0) return;
+    if (!this.affine.eqParsed){
+      this.showToast('Équation invalide.', 1.0);
+      return;
+    }
+
+    this.audio.play();
+    this.affine.shot = ShotState.FIRING;
+    this.affine.firingElapsed = 0;
+    this.affine.linePts = this.affineLinePoints(this.affine.eqParsed.a, this.affine.eqParsed.b);
+    this.affine.revealIndex = 1;
+    this.affine.revealCarry = 0;
+    this.affine.drawPps = (this.affine.linePts.length-1) / 5.0;
+
+    if (this.affineUI){
+      this.affineUI.eqIn.disabled = true;
+      this.affineUI.helpBtn.disabled = true;
+      this.affineUI.fireBtn.disabled = true;
+    }
+    this.dirty = true;
+  }
+
+  endAffineShot(hit){
+    this.affine.shot = ShotState.RESOLVING;
+
+    if (this.affineUI){
+      this.affineUI.eqIn.disabled = false;
+      this.affineUI.helpBtn.disabled = false;
+      this.affineUI.fireBtn.disabled = false;
+    }
+
+    const start = this.affine.start;
+    const target = this.affine.target;
+
+    const num = (target.y - start.y);
+    const den = (target.x - start.x);
+    const aSol = num / den;
+    const bSol = start.y;
+
+    if (hit){
+      this.setScore(this.score + 1);
+      this.showPopup({
+        title: '✅ Touché !',
+        text:
+`Solution complète :
+
+1) Ordonnée à l’origine :
+b = y quand x = 0
+Donc b = ${fmt(start.y,2)}
+
+2) Coefficient directeur :
+a = (y₂ - y₁) / (x₂ - x₁)
+a = (${fmt(target.y,2)} - ${fmt(start.y,2)}) / (${fmt(target.x,2)} - ${fmt(start.x,2)})
+a = ${fmt(num,2)} / ${fmt(den,2)}
+a = ${fmt(aSol,2)}
+
+Donc : y = ${fmt(aSol,2)}x + ${fmt(bSol,2)}`,
+        closable: false,
+        actions: [
+          { label:'Cible suivante', kind:'primary', onClick: ()=>{
+            this.hidePopup();
+            if (this.score >= CFG.SCORE_TO_WIN){ this.onWin(); return; }
+            this.spawnAffineStartAndTarget();
+            if (this.affineUI){
+              this.affineUI.eqIn.value='';
+              this.affineUI.syncEq();
+            }
+            this.affine.shot = ShotState.READY;
+            this.dirty = true;
+          }}
+        ]
+      });
+    }else{
+      this.setLives(this.lives - 1);
+      this.showPopup({
+        title: '🟠 Raté (-1 ❤️) — Méthode',
+        text:
+`Pour relier Départ → Cible :
+
+• b = y quand x = 0
+Ici : b = ${fmt(start.y,2)}
+
+• a = (y₂ - y₁) / (x₂ - x₁)
+a = (${fmt(target.y,2)} - ${fmt(start.y,2)}) / (${fmt(target.x,2)} - ${fmt(start.x,2)})
+a = ${fmt(num,2)} / ${fmt(den,2)}
+a = ${fmt(aSol,2)}
+
+Droite attendue : y = ${fmt(aSol,2)}x + ${fmt(bSol,2)}`,
+        closable: false,
+        actions: [
+          { label:'Cible suivante', kind:'primary', onClick: ()=>{
+            this.hidePopup();
+            if (this.lives <= 0){ this.onGameOver(); return; }
+            this.spawnAffineStartAndTarget();
+            if (this.affineUI){
+              this.affineUI.eqIn.value='';
+              this.affineUI.syncEq();
+            }
+            this.affine.shot = ShotState.READY;
+            this.dirty = true;
+          }}
+        ]
+      });
+    }
+    this.dirty = true;
+  }
+
+  /* =========================
+     SECOND DEGRÉ
+  ========================= */
+  spawnTargetQuad(){
+    const minX = 1.5, maxX = 9.5;
+    const minY = 1.5, maxY = 9.0;
+
+    for (let k=0;k<260;k++){
+      const x = Math.round(lerp(minX, maxX, Math.random())*2)/2;
+      const y = Math.round(lerp(minY, maxY, Math.random())*2)/2;
+      const cand = {x,y};
+      if (this.quad.lastTarget && dist2(cand, this.quad.lastTarget) < CFG.TARGET_MIN_DIST**2) continue;
+      if (!this.reachableBySomeShot(cand)) continue;
+      this.quad.target = cand;
+      this.quad.lastTarget = {...cand};
+      this.quad.bounce = 1;
+      this.quad.ghostVisible = false;
+      return;
+    }
+    this.quad.target = {x: 8, y: 5};
+    this.quad.lastTarget = {x:8,y:5};
+    this.quad.bounce = 1;
+    this.quad.ghostVisible = false;
+  }
+
+  reachableBySomeShot(target){
+    for(let a=15;a<=75;a+=10){
+      for(let p=25;p<=95;p+=10){
+        const pts = this.simulateProjectile(p,a);
+        for(let i=0;i<pts.length-1;i++){
+          if (segCircleWorld(pts[i], pts[i+1], target, CFG.TARGET_HIT_RADIUS_U)) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  startQuadMode(){
+    this.screen = Screen.QUAD;
+    this.r.setView(View.POS);
+    this.setModeLabel('Second degré');
+    this.setScore(0);
+    this.hidePopup();
+    this.showCornerTimer(false);
+
+    this.quad.shot = ShotState.READY;
+    this.quad.power = 60;
+    this.quad.angle = 45;
+    this.quad.trajPts = [];
+    this.quad.revealIndex = 0;
+    this.quad.revealCarry = 0;
+    this.quad.firingElapsed = 0;
+    this.quad.mustChangePower = false;
+    this.quad.lastShotPower = null;
+
+    this.spawnTargetQuad();
+    this.updateQuadCoeffsAndVertex();
+    this.renderQuadPanel();
+    this.updateQuadFireEnable();
+
+    this.showToast('Second degré : vise la cible 🎯', 1.2);
+    this.dirty = true;
+  }
+
+  updateQuadFireEnable(){
+    if (!this.quadUI) return;
+    const canFire =
+      this.screen === Screen.QUAD &&
+      this.quad.shot === ShotState.READY &&
+      this.lives > 0 &&
+      !this.quad.mustChangePower;
+    this.quadUI.fireBtn.disabled = !canFire;
+  }
+
+  renderQuadPanel(){
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <div class="card">
+        <div class="labelRow">
+          <div class="label">⚡ Puissance</div>
+          <div class="value"><span id="pVal">${fmt(this.quad.power,1)}</span>%</div>
+        </div>
+        <div class="range">
+          <input id="power" type="range" min="1" max="100" step="0.1" value="${this.quad.power}" />
+        </div>
+
+        <div class="labelRow" style="margin-top:10px;">
+          <div class="label">🎯 Angle</div>
+          <div class="value"><span id="aVal">${fmt(this.quad.angle,1)}</span>°</div>
+        </div>
+        <div class="range">
+          <input id="angle" type="range" min="10" max="80" step="0.1" value="${this.quad.angle}" />
+        </div>
+
+        <div class="underNote" id="vertexInfo">Sommet : …</div>
+
+        <div class="btnCol">
+          <button id="unlockBtn" class="blue">Débloquer la trajectoire fantôme</button>
+          <button id="fireBtn" class="danger">TIRER</button>
+          <button id="retryBtn" class="mini">Nouvelle cible</button>
+        </div>
+
+        <div class="underNote" id="antiMis" style="margin-top:10px; display:none;">
+          <span class="warn">Change la puissance pour pouvoir tirer.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="underNote">
+          <span class="help">Aide :</span> pour débloquer la trajectoire fantôme ROUGE, calcule <b>xS</b> et <b>yS</b> à partir de <b>a, b, c</b>.
+        </div>
+      </div>
+    `;
+    this.addChangeModeButton(wrap);
+    this.setSidePanel(wrap);
+
+    const power = wrap.querySelector('#power');
+    const angle = wrap.querySelector('#angle');
+    const pVal  = wrap.querySelector('#pVal');
+    const aVal  = wrap.querySelector('#aVal');
+    const vertexInfo = wrap.querySelector('#vertexInfo');
+    const unlockBtn = wrap.querySelector('#unlockBtn');
+    const fireBtn = wrap.querySelector('#fireBtn');
+    const retryBtn = wrap.querySelector('#retryBtn');
+    const antiMis = wrap.querySelector('#antiMis');
+
+    const sync = ()=>{
+      this.quad.power = Number(power.value);
+      this.quad.angle = Number(angle.value);
+      pVal.textContent = fmt(this.quad.power,1);
+      aVal.textContent = fmt(this.quad.angle,1);
+
+      if (this.quad.mustChangePower && this.quad.lastShotPower !== null){
+        const eps = 0.09;
+        if (Math.abs(this.quad.power - this.quad.lastShotPower) >= eps){
+          this.quad.mustChangePower = false;
+          antiMis.style.display = 'none';
+          this.showToast('OK ✅ tu peux tirer.', 0.9);
+        }else{
+          antiMis.style.display = '';
+        }
+      }else{
+        antiMis.style.display = 'none';
+      }
+
+      this.updateQuadCoeffsAndVertex();
+      vertexInfo.innerHTML = `Sommet : <b>S(${fmt(this.quad.vertex.x,2)} ; ${fmt(this.quad.vertex.y,2)})</b>`;
+
+      this.updateQuadFireEnable();
+      this.dirty = true;
+    };
+
+    power.addEventListener('input', sync);
+    angle.addEventListener('input', sync);
+
+    unlockBtn.addEventListener('click', ()=>this.unlockQuadGhostQuiz());
+
+    fireBtn.addEventListener('click', ()=>{
+      if (this.quad.mustChangePower){
+        this.showToast('Change la puissance avant de tirer.', 1.1);
+        return;
+      }
+      this.fireQuad();
+    });
+
+    retryBtn.addEventListener('click', ()=>{
+      this.spawnTargetQuad();
+      this.quad.shot = ShotState.READY;
+      this.quad.trajPts = [];
+      this.quad.revealIndex = 0;
+      this.quad.revealCarry = 0;
+      this.updateQuadFireEnable();
+      this.dirty = true;
+    });
+
+    this.quadUI = {power, angle, unlockBtn, fireBtn, vertexInfo, antiMis};
+    sync();
+  }
+
+  powerToV0(power){
+    const p = clamp(power,1,100)/100;
+    return CFG.V0_MIN + p*(CFG.V0_MAX - CFG.V0_MIN);
+  }
+
+  updateQuadCoeffsAndVertex(){
+    const v0 = this.powerToV0(this.quad.power);
+    const th = deg2rad(this.quad.angle);
+    const cos = Math.cos(th);
+    const tan = Math.tan(th);
+    const A = -CFG.G / (2 * v0*v0 * cos*cos);
+    const B = tan;
+    const C = 0;
+    this.quad.A = A; this.quad.B = B; this.quad.C = C;
+
+    const xS = -B / (2*A);
+    const yS = A*xS*xS + B*xS + C;
+    this.quad.vertex = {x:xS, y:yS};
+  }
+
+  simulateProjectile(power, angleDeg){
+    const v0 = this.powerToV0(power);
+    const th = deg2rad(angleDeg);
+    const vx = v0*Math.cos(th);
+    const vy = v0*Math.sin(th);
+
+    const pts = [{x:0,y:0}];
+    let t = 0;
+    while (t < CFG.QUAD_MAX_SHOT_SEC){
+      t += CFG.SIM_DT;
+      const x = vx*t;
+      const y = vy*t - 0.5*CFG.G*t*t;
+      pts.push({x,y});
+      if (x > 11) break;
+      if (y < -1) break;
+      if (y > 11) break;
+    }
+    return pts;
+  }
+
+  // ✅ arrondi à 2 décimales
+  round2(x){ return Math.round(x*100)/100; }
+
+  // ✅ coeff aléatoire non nul, max 2 décimales
+  rand2(min, max, minAbs=0.2){
+    for(let i=0;i<200;i++){
+      const v = this.round2(lerp(min, max, Math.random()));
+      if (Math.abs(v) >= minAbs) return v;
+    }
+    // fallback
+    return this.round2((Math.random()<0.5?-1:1)*Math.max(minAbs, (max-minAbs)));
+  }
+
+  // ✅ Génère un triplet (a,b,c) non nuls ET un sommet "raisonnable"
+  makeVertexQuiz(){
+    for(let k=0;k<CFG.VERTEX_QUIZ_TRIES;k++){
+      const a = this.rand2(-2.5, 2.5, CFG.VERTEX_A_MINABS); // non nul
+      const b = this.rand2(-9.5, 9.5, 0.2);                 // non nul
+      const c = this.rand2(-9.5, 9.5, 0.2);                 // non nul
+
+      const xS = -b/(2*a);
+      const yS = (4*a*c - b*b)/(4*a);
+
+      if (!Number.isFinite(xS) || !Number.isFinite(yS)) continue;
+      if (Math.abs(xS) > CFG.VERTEX_X_ABS_MAX) continue;
+      if (Math.abs(yS) > CFG.VERTEX_Y_ABS_MAX) continue;
+
+      // garde aussi des valeurs "lisibles" (2 décimales max)
+      return {a:this.round2(a), b:this.round2(b), c:this.round2(c), xS:this.round2(xS), yS:this.round2(yS)};
+    }
+    // fallback sûr
+    const a = 1.25, b = -3.5, c = 2.25;
+    const xS = -b/(2*a);
+    const yS = (4*a*c - b*b)/(4*a);
+    return {a,b,c, xS:this.round2(xS), yS:this.round2(yS)};
+  }
+
+  // ✅ MODIF : quiz sommet basé sur (a,b,c) ALÉATOIRES affichés dans la popup
+  unlockQuadGhostQuiz(){
+    if (this.screen !== Screen.QUAD) return;
+    if (this.quad.shot !== ShotState.READY) return;
+
+    const Q = this.makeVertexQuiz(); // {a,b,c,xS,yS} aléatoires
+    const a = Q.a, b = Q.b, c = Q.c;
+    const xS = Q.xS, yS = Q.yS;
+
+    const node = document.createElement('div');
+    node.style.marginTop='10px';
+    node.innerHTML = `
+      <div class="hint"><b>Parabole de la question :</b></div>
+      <div class="hint" style="margin-top:6px;">
+        y = <span class="ca">${fmt(a,2)}</span>x² ${b>=0?'+':'-'} <span class="cb">${fmt(Math.abs(b),2)}</span>x ${c>=0?'+':'-'} <span class="cc">${fmt(Math.abs(c),2)}</span>
+      </div>
+
+      <div class="hint" style="margin-top:8px;">
+        Coefficients :
+        <span class="ca">a = ${fmt(a,2)}</span> • <span class="cb">b = ${fmt(b,2)}</span> • <span class="cc">c = ${fmt(c,2)}</span>
+      </div>
+
+      <div class="hint" style="margin-top:10px;">
+        Calcule le sommet <b>S(xS ; yS)</b> avec :
+      </div>
+      <div class="hint" style="margin-top:6px;">
+        xS = − <span class="cb">b</span> / (2<span class="ca">a</span>)
+        &nbsp;&nbsp;et&nbsp;&nbsp;
+        yS = (4<span class="ca">a</span><span class="cc">c</span> − <span class="cb">b</span>²) / (4<span class="ca">a</span>)
+      </div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; justify-content:center;">
+        <div style="width:240px;">
+          <div class="hint" style="text-align:center;">xS</div>
+          <input id="xIn" type="text" inputmode="decimal" placeholder="xS (max 2 décimales)" style="text-align:center;" />
+        </div>
+        <div style="width:240px;">
+          <div class="hint" style="text-align:center;">yS</div>
+          <input id="yIn" type="text" inputmode="decimal" placeholder="yS (max 2 décimales)" style="text-align:center;" />
+        </div>
+      </div>
+
+      <div class="underNote">Tolérance : ±${CFG.QUAD_HELP_TOL} sur xS et yS.</div>
+      <div class="underNote" style="opacity:.75;">
+        (La croix “S” sur le plan sert au tir actuel, mais la réponse attendue ici vient des coefficients ci-dessus.)
+      </div>
+    `;
+    const xIn = node.querySelector('#xIn');
+    const yIn = node.querySelector('#yIn');
+
+    this.showPopup({
+      title: '🔓 Débloquer la trajectoire fantôme (second degré)',
+      text: 'Si c’est juste : la parabole fantôme ROUGE reste affichée jusqu’à la cible suivante.',
+      closable: true,
+      customNode: node,
+      actions: [
+        { label:'Valider', kind:'primary', onClick: ()=>{
+          const vx = parseNumFlex(xIn.value);
+          const vy = parseNumFlex(yIn.value);
+          if (vx === null || vy === null){ this.showToast('Deux nombres attendus.', 1.1); return; }
+
+          const okX = Math.abs(vx - xS) <= CFG.QUAD_HELP_TOL;
+          const okY = Math.abs(vy - yS) <= CFG.QUAD_HELP_TOL;
+
+          this.hidePopup();
+          if (okX && okY){
+            this.quad.ghostVisible = true;
+            this.showToast('✅ Trajectoire fantôme activée', 1.2);
+          }else{
+            this.showToast('❌ Faux : aide refusée', 1.2);
+          }
+          this.dirty = true;
+        }},
+        { label:'Annuler', kind:'mini', onClick: ()=>this.hidePopup() }
+      ]
+    });
+
+    setTimeout(()=>xIn.focus(), 60);
+  }
+
+  fireQuad(){
+    if (this.screen !== Screen.QUAD) return;
+    if (this.quad.shot !== ShotState.READY) return;
+    if (this.lives <= 0) return;
+    if (this.quad.mustChangePower){
+      this.showToast('Change la puissance avant de tirer.', 1.1);
+      return;
+    }
+
+    this.audio.play();
+    this.quad.shot = ShotState.FIRING;
+    this.quad.firingElapsed = 0;
+    this.quad.trajPts = this.simulateProjectile(this.quad.power, this.quad.angle);
+    this.quad.revealIndex = 0;
+    this.quad.revealCarry = 0;
+
+    this.quad.drawPps = (this.quad.trajPts.length-1) / 5.0;
+
+    if (this.quadUI){
+      this.quadUI.power.disabled = true;
+      this.quadUI.angle.disabled = true;
+      this.quadUI.unlockBtn.disabled = true;
+      this.quadUI.fireBtn.disabled = true;
+    }
+    this.dirty = true;
+  }
+
+  goNextQuadShot(){
+    if (this.lives <= 0){ this.onGameOver(); return; }
+    if (this.score >= CFG.SCORE_TO_WIN){ this.onWin(); return; }
+
+    this.spawnTargetQuad();
+
+    this.quad.shot = ShotState.READY;
+    this.quad.trajPts = [];
+    this.quad.revealIndex = 0;
+    this.quad.revealCarry = 0;
+    this.quad.firingElapsed = 0;
+
+    this.quad.mustChangePower = true;
+    this.quad.lastShotPower = this.quad.power;
+    if (this.quadUI) this.quadUI.antiMis.style.display = '';
+
+    this.updateQuadFireEnable();
+    this.showToast('Change la puissance pour pouvoir tirer.', 1.3);
+    this.dirty = true;
+  }
+
+  generateDeltaQuestion(){
+    const types = ['NEG','ZERO','POS'];
+    const aSet = [-2,-1.5,-1,-0.5,0.5,1,1.5,2];
+    const rootSet = [];
+    for(let r=-6; r<=6; r+=0.5){
+      const rr = Math.round(r*2)/2;
+      if (Math.abs(rr) < 1e-9) continue;
+      rootSet.push(rr);
+    }
+
+    for(let tries=0; tries<400; tries++){
+      const type = this.pickFromSet(types);
+      let a = this.pickFromSet(aSet);
+      let b=0, c=0;
+
+      if (type === 'POS'){
+        let r1 = this.pickFromSet(rootSet);
+        let r2 = this.pickFromSet(rootSet);
+        if (Math.abs(r1-r2) < 1e-9) continue;
+        b = -a*(r1+r2);
+        c = a*(r1*r2);
+      } else if (type === 'ZERO'){
+        let r = this.pickFromSet(rootSet);
+        b = -2*a*r;
+        c = a*(r*r);
+      } else {
+        b = this.pickFromSet([-10,-8,-6,-4,-2,2,4,6,8,10]);
+        const base = (b*b) / (4*a);
+        if (a > 0) c = base + this.pickFromSet([1,2,3,4,5]);
+        else       c = base - this.pickFromSet([1,2,3,4,5]);
+      }
+
+      a = this.round2(a);
+      b = this.round2(b);
+      c = this.round2(c);
+      if (Math.abs(c) < 1e-9) continue;
+
+      const delta = this.round2(b*b - 4*a*c);
+
+      let expected;
+      if (Math.abs(delta) <= 0.05) expected = 1;
+      else if (delta > 0) expected = 2;
+      else expected = 0;
+
+      let roots = [];
+      if (expected > 0){
+        const D = Math.max(0, delta);
+        const s = Math.sqrt(D);
+        const x1 = (-b - s) / (2*a);
+        const x2 = (-b + s) / (2*a);
+        roots = (expected === 1) ? [this.round2((-b)/(2*a))] : [this.round2(x1), this.round2(x2)];
+        if (roots.some(x => !Number.isFinite(x) || Math.abs(x) > 20)) continue;
+      }
+
+      return {a,b,c,delta,expected,roots};
+    }
+
+    return {a:1,b:2,c:5,delta:-16,expected:0,roots:[]};
+  }
+
+  startDeltaChallenge(onDone){
+    if (this.screen !== Screen.QUAD) { onDone?.(); return; }
+
+    this.deltaQ = this.generateDeltaQuestion();
+    const {a,b,c} = this.deltaQ;
+
+    const eqStr = `<span class="ca">${fmt(a,2)}</span>x² ${b>=0?'+':'-'} <span class="cb">${fmt(Math.abs(b),2)}</span>x ${c>=0?'+':'-'} <span class="cc">${fmt(Math.abs(c),2)}</span> = 0`;
+
+    const node = document.createElement('div');
+    node.style.marginTop = '10px';
+    node.innerHTML = `
+      <div class="hint"><b>Équation :</b> ${eqStr}</div>
+      <div class="hint" style="margin-top:8px;">
+        Coefficients :
+        <span class="ca">a=${fmt(a,2)}</span> •
+        <span class="cb">b=${fmt(b,2)}</span> •
+        <span class="cc">c=${fmt(c,2)}</span>
+      </div>
+
+      <div class="hint" style="margin-top:10px;">
+        1) Calcule <b>Δ</b> = <span class="cb">b</span>² − 4<span class="ca">a</span><span class="cc">c</span>
+      </div>
+      <div style="margin-top:8px; display:flex; justify-content:center;">
+        <input id="dIn" type="text" inputmode="decimal" placeholder="Δ (tolérance ±${CFG.DELTA_TOL})" style="width:240px; text-align:center;" />
+      </div>
+
+      <div class="hint" style="margin-top:10px;">
+        2) Nombre de solutions réelles :
+      </div>
+      <div style="margin-top:8px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap; font-weight:1000;">
+        <label style="cursor:pointer;"><input type="radio" name="nsol" value="0"> 0</label>
+        <label style="cursor:pointer;"><input type="radio" name="nsol" value="1"> 1</label>
+        <label style="cursor:pointer;"><input type="radio" name="nsol" value="2"> 2</label>
+      </div>
+
+      <div class="underNote">
+        Réussite : <span class="ok">+1 ❤️</span> • Échec : <span class="bad">-1 ❤️</span><br>
+        (La suite dépend du nombre de solutions : racines si besoin)
+      </div>
+    `;
+
+    const dIn = node.querySelector('#dIn');
+
+    this.showPopup({
+      title: '🎁 Défi : gagner une vie (Δ)',
+      text: `Tu peux tenter (ou refuser) ce défi avant le tir suivant.`,
+      closable: false,
+      customNode: node,
+      actions: [
+        {
+          label:'Valider',
+          kind:'primary',
+          onClick: ()=>{
+            const dUser = parseNumFlex(dIn.value);
+            const nSolEl = node.querySelector('input[name="nsol"]:checked');
+            const nUser = nSolEl ? Number(nSolEl.value) : null;
+
+            if (dUser === null || nUser === null){
+              this.showToast('Δ + nombre de solutions attendus.', 1.2);
+              return;
+            }
+
+            const {delta, expected} = this.deltaQ;
+            const deltaOk = Math.abs(dUser - delta) <= CFG.DELTA_TOL;
+            const nOk = (nUser === expected);
+
+            if (!deltaOk || !nOk){
+              this.hidePopup();
+              this.setLives(this.lives - 1);
+              this.showPopup({
+                title:'❌ Faux (Δ / solutions)',
+                text:
+`Correction :
+Δ = ${fmt(delta,2)}
+Nombre de solutions : ${expected}
+
+Rappel :
+• Δ < 0 → 0 solution
+• Δ = 0 → 1 solution
+• Δ > 0 → 2 solutions`,
+                closable:false,
+                actions:[
+                  {label:'Continuer', kind:'primary', onClick: ()=>{
+                    this.hidePopup();
+                    onDone?.();
+                  }}
+                ]
+              });
+              return;
+            }
+
+            this.hidePopup();
+            if (expected === 0){
+              this.setLives(this.lives + 1);
+              this.showPopup({
+                title:'✅ Bien vu : Δ < 0',
+                text:`Aucune racine réelle → on passe au tir suivant.\n(+1 ❤️)`,
+                closable:false,
+                actions:[
+                  {label:'Tir suivant', kind:'primary', onClick: ()=>{
+                    this.hidePopup();
+                    onDone?.();
+                  }}
+                ]
+              });
+              return;
+            }
+
+            this.askRootsThenReward(onDone);
+          }
+        },
+        { label:'Non merci', kind:'mini', onClick: ()=>{ this.hidePopup(); onDone?.(); } }
+      ]
+    });
+
+    setTimeout(()=>dIn.focus(), 60);
+  }
+
+  // formules séparées x1 / x2 (comme demandé précédemment)
+  askRootsThenReward(onDone){
+    const {a,b,c,delta,expected,roots} = this.deltaQ;
+
+    const coeffLine =
+      `Coefficients : <span class="ca">a=${fmt(a,2)}</span> • <span class="cb">b=${fmt(b,2)}</span> • <span class="cc">c=${fmt(c,2)}</span>`;
+
+    const node = document.createElement('div');
+    node.style.marginTop = '10px';
+
+    if (expected === 1){
+      node.innerHTML = `
+        <div class="hint">${coeffLine}</div>
+        <div class="hint" style="margin-top:8px;">Δ = <b>${fmt(delta,2)}</b> → <b>1 solution</b></div>
+        <div class="hint" style="margin-top:8px;">
+          Formule : x<span style="opacity:.8">1</span> = (−<span class="cb">b</span>) / (2<span class="ca">a</span>)
+        </div>
+
+        <div style="margin-top:10px; display:flex; justify-content:center;">
+          <input id="x1" type="text" inputmode="decimal" placeholder="x1 (tolérance ±${CFG.ROOT_TOL})" style="width:240px; text-align:center;" />
+        </div>
+      `;
+    }else{
+      node.innerHTML = `
+        <div class="hint">${coeffLine}</div>
+        <div class="hint" style="margin-top:8px;">Δ = <b>${fmt(delta,2)}</b> → <b>2 solutions</b></div>
+
+        <div class="hint" style="margin-top:8px;">
+          Formule 1 :
+          x<span style="opacity:.8">1</span> = (−<span class="cb">b</span> − √Δ) / (2<span class="ca">a</span>)
+        </div>
+        <div class="hint" style="margin-top:6px;">
+          Formule 2 :
+          x<span style="opacity:.8">2</span> = (−<span class="cb">b</span> + √Δ) / (2<span class="ca">a</span>)
+        </div>
+
+        <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+          <input id="x1" type="text" inputmode="decimal" placeholder="x1 (±${CFG.ROOT_TOL})" style="width:220px; text-align:center;" />
+          <input id="x2" type="text" inputmode="decimal" placeholder="x2 (±${CFG.ROOT_TOL})" style="width:220px; text-align:center;" />
+        </div>
+
+        <div class="underNote">Tu peux les donner dans n’importe quel ordre.</div>
+      `;
+    }
+
+    const getEl = (id)=>node.querySelector('#'+id);
+
+    this.showPopup({
+      title:'🧮 Racines',
+      text:`Calcule les racines (si elles existent).`,
+      closable:false,
+      customNode: node,
+      actions:[
+        {
+          label:'Valider',
+          kind:'primary',
+          onClick: ()=>{
+            const x1u = parseNumFlex(getEl('x1')?.value);
+            if (x1u === null){ this.showToast('x1 attendu.', 1.1); return; }
+
+            let ok=false;
+            if (expected === 1){
+              ok = Math.abs(x1u - roots[0]) <= CFG.ROOT_TOL;
+            }else{
+              const x2u = parseNumFlex(getEl('x2')?.value);
+              if (x2u === null){ this.showToast('x2 attendu.', 1.1); return; }
+              const r1 = roots[0], r2 = roots[1];
+              const ok1 = Math.abs(x1u - r1) <= CFG.ROOT_TOL && Math.abs(x2u - r2) <= CFG.ROOT_TOL;
+              const ok2 = Math.abs(x1u - r2) <= CFG.ROOT_TOL && Math.abs(x2u - r1) <= CFG.ROOT_TOL;
+              ok = ok1 || ok2;
+            }
+
+            this.hidePopup();
+            if (ok){
+              this.setLives(this.lives + 1);
+              this.showPopup({
+                title:'✅ Bravo',
+                text:`Correct.\n(+1 ❤️)`,
+                closable:false,
+                actions:[{label:'Tir suivant', kind:'primary', onClick: ()=>{ this.hidePopup(); onDone?.(); }}]
+              });
+            }else{
+              this.setLives(this.lives - 1);
+              const corr = (expected === 1)
+                ? `x1 = ${fmt(roots[0],2)}`
+                : `x1 = ${fmt(roots[0],2)}\nx2 = ${fmt(roots[1],2)}`;
+              this.showPopup({
+                title:'❌ Faux',
+                text:`Correction :\n${corr}\n(-1 ❤️)`,
+                closable:false,
+                actions:[{label:'Tir suivant', kind:'primary', onClick: ()=>{ this.hidePopup(); onDone?.(); }}]
+              });
+            }
+          }
+        }
+      ]
+    });
+
+    setTimeout(()=>getEl('x1')?.focus(), 60);
+  }
+
+  endQuadShot(hit){
+    this.quad.shot = ShotState.RESOLVING;
+
+    if (this.quadUI){
+      this.quadUI.power.disabled = false;
+      this.quadUI.angle.disabled = false;
+      this.quadUI.unlockBtn.disabled = false;
+    }
+
+    if (hit) this.setScore(this.score + 1);
+    else this.setLives(this.lives - 1);
+
+    const A=this.quad.A, B=this.quad.B, C=this.quad.C;
+    const xS = -B/(2*A);
+    const yS = (4*A*C - B*B)/(4*A);
+
+    const methodText =
+`Équation (type y=ax²+bx+c) :
+y = ${fmt(A,2)}x² + ${fmt(B,2)}x + ${fmt(C,2)}
+
+Sommet S :
+xS = − b / (2a)
+yS = (4ac − b²) / (4a)
+Ici : S(${fmt(xS,2)} ; ${fmt(yS,2)})
+
+Discriminant :
+Δ = b² − 4ac
+→ Δ<0 : 0 solution, Δ=0 : 1 solution, Δ>0 : 2 solutions (quand y=0).`;
+
+    this.quad.mustChangePower = true;
+    this.quad.lastShotPower = this.quad.power;
+    if (this.quadUI) this.quadUI.antiMis.style.display = '';
+    this.updateQuadFireEnable();
+
+    const canGain = this.lives < CFG.LIVES_MAX_GAME;
+
+    this.showPopup({
+      title: hit ? '✅ Tir réussi' : (this.lives>0 ? '❌ Tir raté (-1 ❤️)' : '💥 Tir raté (0 ❤️)'),
+      text: methodText + `\n\n🎁 Souhaites-tu tenter un défi Δ pour gagner 1 vie ?`,
+      closable: false,
+      actions: [
+        {
+          label: canGain ? 'Tenter +1 vie (Δ)' : 'Vies au max',
+          kind:'blue',
+          disabled: !canGain,
+          onClick: ()=>{
+            this.hidePopup();
+            this.startDeltaChallenge(()=>this.goNextQuadShot());
+          }
+        },
+        {
+          label: (this.lives>0 ? 'Tir suivant' : 'Terminer'),
+          kind:'primary',
+          onClick: ()=>{
+            this.hidePopup();
+            if (this.lives <= 0) this.onGameOver();
+            else this.goNextQuadShot();
+          }
+        }
+      ]
+    });
+
+    this.dirty = true;
+  }
+
+  onWin(){
+    this.screen = Screen.WIN;
+    this.setModeLabel('Victoire');
+    this.showPopup({
+      title:'🎉 Victoire !',
+      text:`Bravo : ${CFG.SCORE_TO_WIN} cibles touchées.`,
+      closable:false,
+      actions:[ {label:'Réinitialiser', kind:'primary', onClick: ()=>this.goMenu()} ]
+    });
+  }
+  onGameOver(){
+    this.screen = Screen.GAME_OVER;
+    this.setModeLabel('Game Over');
+    this.showPopup({
+      title:'💥 Game Over',
+      text:`Tu n’as plus de vies.`,
+      closable:false,
+      actions:[
+        {label:'Réinitialiser', kind:'primary', onClick: ()=>this.goMenu()},
+        {label:'Retenter le test', kind:'mini', onClick: ()=>{
+          this.hidePopup();
+          if (!this.chosenMode) this.goMenu();
+          else this.startTestIntro(this.chosenMode);
+        }},
+      ]
+    });
+  }
+
+  async toggleFullscreen(){
+    try{
+      if(document.fullscreenElement){
+        await document.exitFullscreen();
+        this.showToast('Plein écran quitté.', 1.0);
+      }else{
+        await document.documentElement.requestFullscreen({navigationUI:'hide'});
+      }
+    }catch(_){
+      this.showToast('Plein écran indisponible ici.', 1.2);
+    }
+  }
+  exportHtml(){
+    const html='<!doctype html>\n'+document.documentElement.outerHTML;
+    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='xy_shooter.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),500);
+    this.showToast('Export OK 📦', 1.1);
+  }
+
+  /* =========================
+     DRAW
+  ========================= */
+  drawTest(){
+    this.r.drawGrid();
+    this.r.drawCrossMarker(this.testPoint, 'rgba(255,211,77,.98)', 12, 3.2);
+    this.r.drawOverlayShade(0.06);
+  }
+
+  drawAffine(){
+    this.r.drawGrid();
+    this.r.drawCrossMarker(this.affine.start, 'rgba(61,255,155,.95)', 11, 3.2);
+    this.r.drawTarget(this.affine.target, this.affine.bounce);
+
+    if (this.affine.ghostVisible && this.affine.eqParsed){
+      const pts = this.affineLinePoints(this.affine.eqParsed.a, this.affine.eqParsed.b);
+      this.r.drawPolyline(pts, pts.length-1, true, this.r.css('--ghostAffine') || 'rgba(61,255,155,.85)', 2.8);
+    }
+
+    if (this.affine.shot !== ShotState.READY && this.affine.linePts.length){
+      const end = (this.affine.shot === ShotState.FIRING) ? this.affine.revealIndex : this.affine.linePts.length-1;
+      this.r.drawPolyline(this.affine.linePts, end, false, this.r.css('--traj') || '#ff2b2b', 3.2);
+    }
+
+    if (this.affine.bounce>0) this.affine.bounce = Math.max(0, this.affine.bounce - 0.02);
+  }
+
+  drawQuad(){
+    this.r.drawGrid();
+    this.r.drawTarget(this.quad.target, this.quad.bounce);
+
+    const v = this.quad.vertex;
+    this.r.drawCrossWithLabel(v, `S(${fmt(v.x,2)} ; ${fmt(v.y,2)})`, 'rgba(122,166,255,.95)');
+
+    if (this.quad.ghostVisible && this.quad.shot === ShotState.READY){
+      const pts = this.simulateProjectile(this.quad.power, this.quad.angle);
+      this.r.drawPolyline(pts, pts.length-1, true, this.r.css('--ghostQuad') || 'rgba(255,43,43,.85)', 2.8);
+    }
+
+    if (this.quad.trajPts.length){
+      const end = (this.quad.shot === ShotState.FIRING) ? this.quad.revealIndex : (this.quad.trajPts.length-1);
+      this.r.drawPolyline(this.quad.trajPts, end, false, this.r.css('--traj') || '#ff2b2b', 3.2);
+    }
+
+    if (this.quad.bounce>0) this.quad.bounce = Math.max(0, this.quad.bounce - 0.02);
+  }
+
+  loop = (now)=>{
+    const dt = (now - this.last)/1000;
+    this.last = now;
+
+    if (this.toastTimer>0){
+      this.toastTimer -= dt;
+      if (this.toastTimer<=0) this.toastEl.classList.remove('show');
+    }
+
+    if (this.screen === Screen.TEST_RUNNING){
+      this.testTimeLeft -= dt;
+      const t = Math.max(0, this.testTimeLeft);
+      this.showCornerTimer(true, t, `Test coordonnées • ${this.testIndex+1}/${CFG.TEST_POINTS}`);
+      if (t <= 0 && !this.testAnswered) this.submitTestAnswer(false);
+      this.dirty = true;
+    }
+
+    if (this.screen === Screen.AFFINE && this.affine.shot === ShotState.FIRING){
+      this.affine.firingElapsed += dt;
+
+      this.affine.revealCarry += dt * this.affine.drawPps;
+      const maxI = this.affine.linePts.length - 1;
+      const next = clamp(Math.floor(this.affine.revealIndex + this.affine.revealCarry), 1, maxI);
+
+      if (next > this.affine.revealIndex){
+        this.affine.revealCarry -= (next - this.affine.revealIndex);
+
+        const target = this.affine.target;
+        for (let i=this.affine.revealIndex; i<next; i++){
+          const p1 = this.affine.linePts[i];
+          const p2 = this.affine.linePts[i+1];
+          if (!p2) break;
+          if (segCircleWorld(p1, p2, target, CFG.TARGET_HIT_RADIUS_U)){
+            this.affine.revealIndex = i+1;
+            this.endAffineShot(true);
+            break;
+          }
+        }
+
+        if (this.affine.shot === ShotState.FIRING){
+          this.affine.revealIndex = next;
+        }
+        this.dirty = true;
+      }
+
+      if (this.affine.shot === ShotState.FIRING){
+        if (this.affine.firingElapsed >= CFG.AFFINE_MAX_SHOT_SEC || this.affine.revealIndex >= maxI){
+          const {a,b} = this.affine.eqParsed;
+          const yAtTx = a*this.affine.target.x + b;
+          const hit = Math.abs(yAtTx - this.affine.target.y) <= CFG.AFFINE_HIT_TOL;
+          this.endAffineShot(hit);
+        }
+      }
+    }
+
+    if (this.screen === Screen.QUAD && this.quad.shot === ShotState.FIRING){
+      this.quad.firingElapsed += dt;
+
+      this.quad.revealCarry += dt * this.quad.drawPps;
+      const pts = this.quad.trajPts;
+      const maxI = pts.length - 1;
+      const next = clamp(Math.floor(this.quad.revealIndex + this.quad.revealCarry), 0, maxI);
+
+      if (next > this.quad.revealIndex){
+        this.quad.revealCarry -= (next - this.quad.revealIndex);
+
+        for(let i=this.quad.revealIndex; i<next; i++){
+          if (!pts[i+1]) break;
+          if (segCircleWorld(pts[i], pts[i+1], this.quad.target, CFG.TARGET_HIT_RADIUS_U)){
+            this.quad.revealIndex = i+1;
+            this.endQuadShot(true);
+            break;
+          }
+        }
+
+        if (this.quad.shot === ShotState.FIRING){
+          this.quad.revealIndex = next;
+        }
+        this.dirty = true;
+      }
+
+      if (this.quad.shot === ShotState.FIRING){
+        if (this.quad.firingElapsed >= CFG.QUAD_MAX_SHOT_SEC || this.quad.revealIndex >= maxI){
+          this.endQuadShot(false);
+        }
+      }
+    }
+
+    if (this.dirty){
+      if (this.screen === Screen.MENU || this.screen === Screen.TEST_INTRO){
+        this.r.drawGrid();
+        this.r.drawOverlayShade(0.10);
+        this.showCornerTimer(false);
+      }else if (this.screen === Screen.TEST_RUNNING){
+        this.drawTest();
+      }else if (this.screen === Screen.AFFINE){
+        this.drawAffine();
+      }else if (this.screen === Screen.QUAD){
+        this.drawQuad();
+      }else{
+        this.r.drawGrid();
+        this.r.drawOverlayShade(0.18);
+      }
+      this.dirty = false;
+    }
+
+    requestAnimationFrame(this.loop);
+  }
+}
+
+const game = new Game();
+game.init();
+</script>
+
+
+
+<style>
+</style>
+<script>
+// your code goes here
+</script></body></html>
